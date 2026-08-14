@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.Renviron
+
+# SQLite side-car files; the committed feed is data/weather.sqlite itself,
+# which the workflow force-adds.
+data/*.sqlite-wal
+data/*.sqlite-shm
+
+plots/

@@ -77,8 +77,21 @@ Precipitation is summed per bin, everything else is averaged.
 ## Automation
 
 [.github/workflows/fetch-aemet.yml](.github/workflows/fetch-aemet.yml) polls
-every 6 hours and commits the updated database back to the repository. Add the
-key as repository secret `AEMET_API_KEY`.
+every 6 hours and commits the updated database back to the repository.
+
+Two repository secrets are required:
+
+| Secret | Purpose |
+| --- | --- |
+| `AEMET_API_KEY` | OpenData API key |
+| `FEED_PUSH_TOKEN` | Fine-grained PAT with `Contents: Read and write` on this repo |
+
+The PAT exists because pushes made with the default `GITHUB_TOKEN` are
+attributed to `github-actions[bot]`, and bot pushes do not appear to count as
+repository activity. Public repositories have their scheduled workflows
+disabled after 60 days without activity, so a feed that only ever commits as
+the bot would eventually switch itself off. Pushing as a user avoids that.
+Fine-grained tokens expire, so the token needs rotating before it does.
 
 ## Previous data source
 

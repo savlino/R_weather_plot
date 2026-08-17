@@ -137,6 +137,33 @@ disabled after 60 days without activity, so a feed that only ever commits as
 the bot would eventually switch itself off. Pushing as a user avoids that.
 Fine-grained tokens expire, so the token needs rotating before it does.
 
+The fetch workflow can also mirror the current SQLite snapshot to Cloudflare
+R2. This is optional while the Git copy remains the fallback. To enable it,
+create these additional repository secrets:
+
+| Secret | Purpose |
+| --- | --- |
+| `R2_ACCOUNT_ID` | Cloudflare account ID used in the S3-compatible endpoint |
+| `R2_ACCESS_KEY_ID` | R2 API token access key |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret |
+| `R2_BUCKET` | Target R2 bucket name |
+
+The workflow uploads `snapshots/weather.sqlite` after each successful fetch.
+The credentials are used only by the upload step and are never written to the
+repository. If any R2 secret is missing, the step is skipped and the existing
+Git-backed feed continues to run unchanged.
+
+For the R2 token, create an R2 API token with `Object Read & Write` permission
+for the selected bucket. The endpoint is based on the Cloudflare account ID:
+
+```text
+https://<account-id>.r2.cloudflarestorage.com
+```
+
+R2 currently includes 10 GB-month of Standard storage, 1 million Class A
+operations, 10 million Class B operations, and free egress each month. This
+project is far below those limits.
+
 ## Design trade-offs
 
 ### A rolling API window, not historical backfill

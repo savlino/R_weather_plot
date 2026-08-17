@@ -1,16 +1,20 @@
 #' Render a monthly heatmap from the stored feed.
 #'
-#' Usage: Rscript scripts/render_heatmap.R <idema> <year> <month> [parameter]
+#' Usage: Rscript scripts/render_heatmap.R <year> <month> [parameter]
+#'        Rscript scripts/render_heatmap.R <idema> <year> <month> [parameter]
 
 source("R/aemet.R")
 source("R/store.R")
 source("R/plot_heatmap.R")
+source("R/config.R")
 
 args <- commandArgs(trailingOnly = TRUE)
-idema <- if (length(args) >= 1) args[1] else "1083L"
-year <- if (length(args) >= 2) as.integer(args[2]) else lubridate::year(Sys.Date())
-month <- if (length(args) >= 3) as.integer(args[3]) else lubridate::month(Sys.Date())
-parameter <- if (length(args) >= 4) args[4] else "ta"
+explicit_station <- length(args) >= 4
+idema <- if (explicit_station) args[1] else configured_station()
+offset <- if (explicit_station) 1 else 0
+year <- if (length(args) >= 1 + offset) as.integer(args[1 + offset]) else lubridate::year(Sys.Date())
+month <- if (length(args) >= 2 + offset) as.integer(args[2 + offset]) else lubridate::month(Sys.Date())
+parameter <- if (length(args) >= 3 + offset) args[3 + offset] else "ta"
 
 con <- db_connect(Sys.getenv("WEATHER_DB", unset = DB_PATH_DEFAULT))
 on.exit(dbDisconnect(con), add = TRUE)

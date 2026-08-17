@@ -11,9 +11,9 @@
 source("R/aemet.R")
 source("R/store.R")
 source("R/plot_heatmap.R")
+source("R/config.R")
 
-# CASTRO URDIALES-EDAR (Cantabria); hourly observations.
-IDEMA <- "1083L"
+IDEMA <- configured_station()
 
 con <- db_connect()
 

@@ -42,8 +42,6 @@ jobs:
       - name: Fetch observations
         env:
           AEMET_API_KEY: ${{ secrets.AEMET_API_KEY }}
-          # CASTRO URDIALES-EDAR (Cantabria); space/comma separated for more.
-          AEMET_STATIONS: "1083L"
         run: Rscript scripts/fetch.R
 
       - name: Update feed statistics

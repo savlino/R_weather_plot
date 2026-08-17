@@ -51,7 +51,7 @@ aemet_get <- function(url, api_key, encoding = "UTF-8") {
 
 #' Fetch the last 12 hours of observations for a station.
 #'
-#' @param idema Station code, e.g. "1083L".
+#' @param idema AEMET station code.
 #' @return data.frame in AEMET's wide format, one row per timestamp.
 aemet_fetch_station <- function(idema, api_key = aemet_api_key()) {
   url <- sprintf(

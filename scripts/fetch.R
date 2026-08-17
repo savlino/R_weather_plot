@@ -5,12 +5,10 @@
 
 source("R/aemet.R")
 source("R/store.R")
+source("R/config.R")
 
 args <- commandArgs(trailingOnly = TRUE)
-# Default station: 1083L = CASTRO URDIALES-EDAR (Cantabria).
-stations <- if (length(args)) args else strsplit(
-  Sys.getenv("AEMET_STATIONS", unset = "1083L"), "[,[:space:]]+"
-)[[1]]
+stations <- if (length(args)) args else configured_stations()
 
 con <- db_connect(Sys.getenv("WEATHER_DB", unset = DB_PATH_DEFAULT))
 on.exit(dbDisconnect(con), add = TRUE)

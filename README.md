@@ -56,6 +56,7 @@ _Generated from the committed SQLite feed._
 
 | Path | Purpose |
 | --- | --- |
+| [R/config.R](R/config.R) | Default station and environment overrides |
 | [R/aemet.R](R/aemet.R) | API client, response normalisation |
 | [R/store.R](R/store.R) | SQLite schema, upsert, queries |
 | [R/plot_heatmap.R](R/plot_heatmap.R) | Binning and `pheatmap` rendering |
@@ -93,9 +94,13 @@ Rscript scripts/setup.R
 ## Usage
 
 ```sh
-Rscript scripts/fetch.R 1083L
-Rscript scripts/render_heatmap.R 1083L 2026 8 ta
+Rscript scripts/fetch.R
+Rscript scripts/render_heatmap.R 2026 8 ta
 ```
+
+The default station is configured once in `R/config.R`. Pass station codes as
+arguments for a one-off fetch or set `AEMET_STATIONS` to a comma- or
+space-separated list to fetch multiple stations without changing the scripts.
 
 Supported parameters include `ta` (temperature), `hr`, `pres`, `prec`, `vv`.
 Precipitation is summed per bin, everything else is averaged.

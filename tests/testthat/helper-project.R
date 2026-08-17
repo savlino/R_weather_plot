@@ -1,6 +1,9 @@
 project_root <- normalizePath(file.path(testthat::test_path(), "..", ".."))
 source(file.path(project_root, "R", "aemet.R"))
 source(file.path(project_root, "R", "store.R"))
+source(file.path(project_root, "R", "config.R"))
+
+TEST_IDEMA <- "TEST_STATION"
 source(file.path(project_root, "R", "plot_heatmap.R"))
 
 make_observations <- function(times = c(
@@ -10,7 +13,7 @@ make_observations <- function(times = c(
 )) {
   obs <- data.frame(
     fint = times,
-    idema = rep("1083L", length(times)),
+    idema = rep(TEST_IDEMA, length(times)),
     ubi = rep("TEST STATION", length(times)),
     stringsAsFactors = FALSE
   )

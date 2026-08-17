@@ -9,4 +9,7 @@
 data/*.sqlite-wal
 data/*.sqlite-shm
 
-plots/
+plots/*
+!plots/
+!plots/legacy-vigo-meteogalicia.png
+!plots/current-castro-urdiales-aemet.png

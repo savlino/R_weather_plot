@@ -3,6 +3,24 @@
 Monthly weather heatmaps built from a continuously accumulated feed of
 [AEMET OpenData](https://opendata.aemet.es/) surface observations.
 
+## Heatmap examples
+
+### Legacy Vigo demo
+
+![Legacy Vigo temperature heatmap](plots/legacy-vigo-meteogalicia.png)
+
+This December 2024 heatmap uses the previous Meteogalicia export for Porto de
+Vigo. It is retained as a visual demo only and is not produced from the current
+AEMET feed.
+
+### Current AEMET feed
+
+![Castro Urdiales temperature heatmap](plots/current-castro-urdiales-aemet.png)
+
+This August 2026 heatmap uses the current AEMET feed for Castro Urdiales-EDAR.
+It is an in-progress example with partial monthly coverage; the first complete
+replacement for the legacy demo is expected in September 2026.
+
 ## How the feed works
 
 AEMET's station endpoint
@@ -92,6 +110,51 @@ repository activity. Public repositories have their scheduled workflows
 disabled after 60 days without activity, so a feed that only ever commits as
 the bot would eventually switch itself off. Pushing as a user avoids that.
 Fine-grained tokens expire, so the token needs rotating before it does.
+
+## Design trade-offs
+
+### A rolling API window, not historical backfill
+
+AEMET's conventional observation endpoint exposes only the latest roughly 12
+hours. The historical endpoint provides daily aggregates, not the hourly
+observations needed for this heatmap. Polling every 6 hours gives overlapping
+coverage: a delayed or missed run can usually be recovered by the next poll,
+but two consecutive missed runs can create a permanent gap.
+
+### SQLite committed to Git
+
+The feed uses SQLite because it is portable, has no server to operate, and is
+more than sufficient for one hourly station and a small personal project. The
+database is also convenient for a reproducible demo: cloning the repository
+provides both the code and the data used to render it.
+
+This is a deliberate hobby-project trade-off, not a claim that Git is a good
+general-purpose database or object store. A binary SQLite file is rewritten on
+each data commit. Even though the weather data itself is small, frequent binary
+commits can make the Git history grow much faster than the live database. Git
+history is permanent, so deleting old rows later does not remove those earlier
+database versions.
+
+The manual monthly retention plan is therefore about keeping the active working
+database small and preserving reviewed monthly outputs, not about shrinking
+existing Git history. After the month is complete and its heatmap has been
+checked, the intended workflow is to archive that month's rows, remove them from
+the active database, and commit the archive and PNG together. The archive step
+will be explicit and manual so an incomplete month cannot be deleted by
+accident.
+
+If the feed grows beyond this project's scale, the next options are:
+
+- store append-only CSV or NDJSON and commit less frequently, rebuilding SQLite
+    locally when needed;
+- publish monthly SQLite/CSV snapshots as GitHub Release assets instead of Git
+    history;
+- store the feed in object storage such as S3 or Cloudflare R2; or
+- use a managed PostgreSQL database when concurrent readers, retention queries,
+    or multiple stations justify operating a service.
+
+Containerising the R scripts would improve reproducibility, but it would not
+solve Git's binary-history problem or replace the need for durable storage.
 
 ## Previous data source
 

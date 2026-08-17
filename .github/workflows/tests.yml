@@ -1,0 +1,31 @@
+name: R tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::testthat
+            any::httr2
+            any::jsonlite
+            any::DBI
+            any::RSQLite
+            any::dplyr
+            any::lubridate
+            any::reshape2
+            any::pheatmap
+
+      - name: Run tests
+        run: Rscript -e 'testthat::test_dir("tests/testthat", reporter = "summary")'

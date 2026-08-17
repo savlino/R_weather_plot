@@ -5,7 +5,7 @@
 
 REQUIRED <- c(
   "httr2", "jsonlite", "DBI", "RSQLite",
-  "dplyr", "lubridate", "reshape2", "pheatmap"
+  "dplyr", "lubridate", "reshape2", "pheatmap", "testthat"
 )
 
 do_install <- "install" %in% commandArgs(trailingOnly = TRUE)

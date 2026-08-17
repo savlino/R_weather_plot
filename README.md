@@ -55,13 +55,14 @@ carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 | [R/plot_heatmap.R](R/plot_heatmap.R) | Binning and `pheatmap` rendering |
 | [scripts/fetch.R](scripts/fetch.R) | Polling entry point |
 | [scripts/render_heatmap.R](scripts/render_heatmap.R) | Plot entry point |
+| [tests/testthat](tests/testthat) | Network-free tests for parsing, storage, and binning |
 | [heatmap_project.r](heatmap_project.r) | Interactive fetch + plot |
 
 ## Setup
 
 ```r
 install.packages(c("httr2", "jsonlite", "DBI", "RSQLite",
-                   "dplyr", "lubridate", "reshape2", "pheatmap"))
+                   "dplyr", "lubridate", "reshape2", "pheatmap", "testthat"))
 ```
 
 Put the key in a `.Renviron` file **in the project root** (gitignored):
@@ -91,6 +92,19 @@ Rscript scripts/render_heatmap.R 1083L 2026 8 ta
 
 Supported parameters include `ta` (temperature), `hr`, `pres`, `prec`, `vv`.
 Precipitation is summed per bin, everything else is averaged.
+
+## Tests
+
+The test suite uses synthetic observations and never calls AEMET:
+
+```sh
+Rscript tests/testthat.R
+```
+
+It covers optional fields and timestamps in the AEMET normaliser, idempotent
+and revision-aware SQLite writes, UTC-to-local-time conversion, complete month
+matrix dimensions, and precipitation sums within a 3-hour bin. The same suite
+runs in GitHub Actions on pushes and pull requests.
 
 ## Automation
 

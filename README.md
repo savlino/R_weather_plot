@@ -46,6 +46,12 @@ as `NA` rather than an error.
 Requests use the two-step AEMET protocol: the first response is a JSON envelope
 carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
+<!-- feed-stats:start -->
+_Generated from the committed SQLite feed._
+- **CASTRO URDIALES-EDAR** (`1083L`): 85 observations, 2026-08-12 to 2026-08-16 UTC, 92.4% hourly coverage
+- Archived months: **0**
+<!-- feed-stats:end -->
+
 ## Layout
 
 | Path | Purpose |
@@ -55,6 +61,7 @@ carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 | [R/plot_heatmap.R](R/plot_heatmap.R) | Binning and `pheatmap` rendering |
 | [scripts/fetch.R](scripts/fetch.R) | Polling entry point |
 | [scripts/render_heatmap.R](scripts/render_heatmap.R) | Plot entry point |
+| [scripts/update_stats.R](scripts/update_stats.R) | Generated README feed statistics |
 | [tests/testthat](tests/testthat) | Network-free tests for parsing, storage, and binning |
 | [heatmap_project.r](heatmap_project.r) | Interactive fetch + plot |
 

@@ -47,8 +47,8 @@ Requests use the two-step AEMET protocol: the first response is a JSON envelope
 carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
 <!-- feed-stats:start -->
-_Generated from the active SQLite snapshot in Cloudflare R2._
-- **CASTRO URDIALES-EDAR** (`1083L`): 103 observations, 2026-08-12 to 2026-08-17 UTC, 93.6% hourly coverage
+_Generated from the committed SQLite feed._
+- **CASTRO URDIALES-EDAR** (`1083L`): 127 observations, 2026-08-12 to 2026-08-18 UTC, 94.8% hourly coverage
 - Archived months: **0**
 <!-- feed-stats:end -->
 

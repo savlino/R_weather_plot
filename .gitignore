@@ -4,10 +4,10 @@
 .Ruserdata
 .Renviron
 
-# SQLite side-car files; the committed feed is data/weather.sqlite itself,
-# which the workflow force-adds.
+# SQLite working copy restored from Cloudflare R2 by the fetch workflow.
 data/*.sqlite-wal
 data/*.sqlite-shm
+data/weather.sqlite
 
 plots/*
 !plots/

@@ -15,8 +15,7 @@ OBSERVATION_COLUMNS <- c(
 
 db_connect <- function(path = DB_PATH_DEFAULT) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-  # Deliberately not WAL: the database file is committed to git, so it has to
-  # stay self-contained without -wal/-shm side-cars.
+  # Keep the database self-contained because snapshots are moved as one file.
   con <- dbConnect(SQLite(), path)
   db_init(con)
   con
@@ -43,7 +42,7 @@ db_init <- function(con) {
 #' (idema, fint). AEMET does revise recent values, so last write wins.
 #'
 #' Rows whose payload is byte-identical to what is already stored are skipped,
-#' which keeps the committed database file unchanged when a poll brings nothing
+#' which keeps the snapshot unchanged when a poll brings nothing
 #' new.
 #'
 #' @return number of rows written.

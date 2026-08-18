@@ -40,7 +40,7 @@ station_lines <- if (nrow(coverage)) {
 
 stats <- c(
   STATS_START,
-  "_Generated from the committed SQLite feed._",
+  "_Generated from the active SQLite snapshot in Cloudflare R2._",
   station_lines,
   sprintf("- Archived months: **%d**", length(archive_files)),
   STATS_END

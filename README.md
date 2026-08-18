@@ -32,7 +32,7 @@ aggregates only** (`tmed`, `tmin`, `tmax`, `prec`, `velmedia`, `racha`, `sol`,
 **not** share a parameter set.
 
 Consequently the project polls the station endpoint on a schedule and appends
-into `data/weather.sqlite`. `(idema, fint)` is the primary key, so overlapping
+into the SQLite snapshot stored in R2. `(idema, fint)` is the primary key, so overlapping
 windows and re-runs are idempotent: a poll returning a timestamp already stored
 replaces that row only if the payload actually changed, otherwise it is skipped.
 AEMET does revise recent observations, so this is last-write-wins — superseded
@@ -47,7 +47,7 @@ Requests use the two-step AEMET protocol: the first response is a JSON envelope
 carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
 <!-- feed-stats:start -->
-_Generated from the committed SQLite feed._
+_Generated from the active SQLite snapshot in Cloudflare R2._
 - **CASTRO URDIALES-EDAR** (`1083L`): 103 observations, 2026-08-12 to 2026-08-17 UTC, 93.6% hourly coverage
 - Archived months: **0**
 <!-- feed-stats:end -->
@@ -137,8 +137,10 @@ disabled after 60 days without activity, so a feed that only ever commits as
 the bot would eventually switch itself off. Pushing as a user avoids that.
 Fine-grained tokens expire, so the token needs rotating before it does.
 
-The fetch workflow can also mirror the current SQLite snapshot to Cloudflare
-R2. This is optional while the Git copy remains the fallback. To enable it,
+The fetch workflow stores the current SQLite snapshot in Cloudflare R2 and
+restores it before each poll. This keeps the active database out of Git history.
+R2 is now required by the fetch workflow because `data/weather.sqlite` is no
+longer tracked in Git. Create these repository secrets:
 create these additional repository secrets:
 
 | Secret | Purpose |
@@ -148,10 +150,11 @@ create these additional repository secrets:
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret |
 | `R2_BUCKET` | Target R2 bucket name |
 
-The workflow uploads `snapshots/weather.sqlite` after each successful fetch.
+The workflow uses `snapshots/weather.sqlite` as its durable live database and
+uploads it after each successful fetch.
 The credentials are used only by the upload step and are never written to the
 repository. If any R2 secret is missing, the step is skipped and the existing
-Git-backed feed continues to run unchanged.
+the fallback workflow continues to run unchanged.
 
 For the R2 token, create an R2 API token with `Object Read & Write` permission
 for the selected bucket. The endpoint is based on the Cloudflare account ID:
@@ -174,27 +177,21 @@ observations needed for this heatmap. Polling every 6 hours gives overlapping
 coverage: a delayed or missed run can usually be recovered by the next poll,
 but two consecutive missed runs can create a permanent gap.
 
-### SQLite committed to Git
+### SQLite in R2
 
 The feed uses SQLite because it is portable, has no server to operate, and is
 more than sufficient for one hourly station and a small personal project. The
-database is also convenient for a reproducible demo: cloning the repository
-provides both the code and the data used to render it.
+live file is stored in R2 rather than committed to Git; the workflow downloads
+it, updates it, and uploads the replacement.
 
 This is a deliberate hobby-project trade-off, not a claim that Git is a good
-general-purpose database or object store. A binary SQLite file is rewritten on
-each data commit. Even though the weather data itself is small, frequent binary
-commits can make the Git history grow much faster than the live database. Git
-history is permanent, so deleting old rows later does not remove those earlier
-database versions.
+general-purpose database. R2 provides durable object storage while SQLite keeps
+the data model simple and reproducible.
 
-The manual monthly retention plan is therefore about keeping the active working
-database small and preserving reviewed monthly outputs, not about shrinking
-existing Git history. After the month is complete and its heatmap has been
-checked, the intended workflow is to archive that month's rows, remove them from
-the active database, and commit the archive and PNG together. The archive step
-will be explicit and manual so an incomplete month cannot be deleted by
-accident.
+The manual monthly retention plan will archive that month's rows to R2 after its
+heatmap has been checked, remove them from the active SQLite file, and commit
+the reviewed PNG and summary metadata to Git. The archive step will be explicit
+and manual so an incomplete month cannot be deleted by accident.
 
 If the feed grows beyond this project's scale, the next options are:
 

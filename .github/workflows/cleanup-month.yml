@@ -1,4 +1,4 @@
-name: Archive completed weather month
+name: Clean up completed weather month
 
 on:
   workflow_dispatch:
@@ -12,13 +12,13 @@ on:
         required: true
         type: string
       dry_run:
-        description: "Report and render only; do not archive or delete"
+        description: "Report and render only; do not delete"
         required: true
         default: true
         type: boolean
 
 concurrency:
-  group: aemet-archive
+  group: aemet-cleanup
   cancel-in-progress: false
 
 permissions:
@@ -29,7 +29,7 @@ env:
   R2_BUCKET: ${{ secrets.R2_BUCKET }}
 
 jobs:
-  archive:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,11 +61,11 @@ jobs:
           data/weather.sqlite
           --endpoint-url ${R2_ENDPOINT}
 
-      - name: Archive and render month
+      - name: Render and clean up month
         env:
           WEATHER_DB: data/weather.sqlite
         run: >-
-          Rscript scripts/archive_month.R
+          Rscript scripts/cleanup_month.R
           ${{ inputs.year }} ${{ inputs.month }} ${{ inputs.dry_run }}
 
       - name: Upload dry-run preview
@@ -76,18 +76,6 @@ jobs:
           path: plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
           retention-days: 14
 
-      - name: Upload monthly archive to R2
-        if: ${{ inputs.dry_run == false }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-        run: >-
-          aws s3 cp
-          data/archive/${{ inputs.year }}-${{ inputs.month }}/observations.csv.gz
-          s3://${R2_BUCKET}/archives/${{ inputs.year }}-${{ inputs.month }}/observations.csv.gz
-          --endpoint-url ${R2_ENDPOINT}
-
       - name: Upload reviewed heatmap to R2
         if: ${{ inputs.dry_run == false }}
         env:
@@ -97,7 +85,7 @@ jobs:
         run: >-
           aws s3 cp
           plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
-          s3://${R2_BUCKET}/archives/${{ inputs.year }}-${{ inputs.month }}/heatmap.png
+          s3://${R2_BUCKET}/heatmaps/${{ inputs.year }}-${{ inputs.month }}/heatmap.png
           --endpoint-url ${R2_ENDPOINT}
 
       - name: Update feed statistics
@@ -123,6 +111,6 @@ jobs:
           git config user.name "savlino"
           git config user.email "savlino@users.noreply.github.com"
           git add README.md plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
-          git commit -m "archive: weather observations ${{ inputs.year }}-${{ inputs.month }}" || echo "No Git changes to commit."
+          git commit -m "cleanup: weather observations ${{ inputs.year }}-${{ inputs.month }}" || echo "No Git changes to commit."
           git pull --rebase --autostash
           git push

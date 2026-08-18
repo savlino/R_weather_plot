@@ -1,6 +1,6 @@
-#' Archive one completed local month and optionally remove it from SQLite.
+#' Clean up one completed local month after retaining its heatmap.
 #'
-#' Usage: Rscript scripts/archive_month.R <year> <month> [dry_run]
+#' Usage: Rscript scripts/cleanup_month.R <year> <month> [dry_run]
 
 source("R/aemet.R")
 source("R/store.R")
@@ -9,7 +9,7 @@ source("R/config.R")
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 2) {
-  stop("Usage: Rscript scripts/archive_month.R <year> <month> [dry_run]", call. = FALSE)
+  stop("Usage: Rscript scripts/cleanup_month.R <year> <month> [dry_run]", call. = FALSE)
 }
 
 year <- suppressWarnings(as.integer(args[1]))
@@ -25,7 +25,7 @@ next_start_local <- seq(month_start_local, by = "1 month", length.out = 2)[2]
 current_start_local <- as.POSIXct(format(Sys.Date(), "%Y-%m-01 00:00:00"), tz = "Europe/Madrid")
 
 if (month_start_local >= current_start_local) {
-  stop("Refusing to archive the current or a future month.", call. = FALSE)
+  stop("Refusing to clean up the current or a future month.", call. = FALSE)
 }
 
 utc_text <- function(value) format(value, "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
@@ -45,14 +45,12 @@ if (nrow(rows) == 0) {
   stop(sprintf("No observations found for %04d-%02d.", year, month), call. = FALSE)
 }
 
-archive_dir <- file.path("data", "archive", sprintf("%04d-%02d", year, month))
-archive_path <- file.path(archive_dir, "observations.csv.gz")
 plot_path <- file.path("plots", sprintf("aemet-%04d-%02d.png", year, month))
 
 cat(sprintf(
-  "Month: %04d-%02d\nRows: %d\nUTC range: %s to %s\nDry run: %s\nArchive: %s\nPlot: %s\n",
+  "Month: %04d-%02d\nRows: %d\nUTC range: %s to %s\nDry run: %s\nPlot: %s\n",
   year, month, nrow(rows), month_start_utc, next_start_utc, dry_run,
-  archive_path, plot_path
+  plot_path
 ))
 
 obs <- db_read_observations(
@@ -61,11 +59,7 @@ obs <- db_read_observations(
 )
 
 if (length(unique(obs$idema)) != 1) {
-  stop("The archive currently expects one station. Run one station per archive.", call. = FALSE)
-}
-
-if (file.exists(archive_path) && !dry_run) {
-  stop("Archive already exists; refusing to overwrite it.", call. = FALSE)
+  stop("The cleanup currently expects one station. Run one station per cleanup.", call. = FALSE)
 }
 
 dir.create("plots", showWarnings = FALSE)
@@ -75,15 +69,12 @@ plot_monthly_heatmap(
 )
 
 if (dry_run) {
-  message("Dry run complete: no archive, deletion, or database upload performed.")
+  message("Dry run complete: no deletion or database upload performed.")
   quit(save = "no", status = 0)
 }
-
-dir.create(archive_dir, recursive = TRUE, showWarnings = FALSE)
-write.csv(rows, gzfile(archive_path), row.names = FALSE, na = "")
 
 DBI::dbExecute(con, "DELETE FROM observations WHERE fint >= ? AND fint < ?",
                params = list(month_start_utc, next_start_utc))
 DBI::dbExecute(con, "VACUUM")
 
-message(sprintf("Archived %d rows and removed them from the active database.", nrow(rows)))
+message(sprintf("Removed %d rows from the active database.", nrow(rows)))

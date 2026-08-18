@@ -48,6 +48,7 @@ carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
 <!-- feed-stats:start -->
 _Generated from the active SQLite snapshot in Cloudflare R2._
+- Completed heatmaps retained: **0**
 <!-- feed-stats:end -->
 
 ## Layout
@@ -61,7 +62,7 @@ _Generated from the active SQLite snapshot in Cloudflare R2._
 | [scripts/fetch.R](scripts/fetch.R) | Polling entry point |
 | [scripts/render_heatmap.R](scripts/render_heatmap.R) | Plot entry point |
 | [scripts/update_stats.R](scripts/update_stats.R) | Generated README feed statistics |
-| [scripts/archive_month.R](scripts/archive_month.R) | Dry-run and monthly R2 archive logic |
+| [scripts/cleanup_month.R](scripts/cleanup_month.R) | Dry-run and monthly cleanup logic |
 | [tests/testthat](tests/testthat) | Network-free tests for parsing, storage, and binning |
 | [heatmap_project.r](heatmap_project.r) | Interactive fetch + plot |
 
@@ -117,14 +118,14 @@ and revision-aware SQLite writes, UTC-to-local-time conversion, complete month
 matrix dimensions, and precipitation sums within a 3-hour bin. The same suite
 runs in GitHub Actions on pushes and pull requests.
 
-## Monthly archive
+## Monthly cleanup
 
 After a month is complete, review its heatmap before removing its detailed rows
-from the active SQLite snapshot. The manual [archive workflow](.github/workflows/archive-month.yml)
+from the active SQLite snapshot. The manual [cleanup workflow](.github/workflows/cleanup-month.yml)
 requires an explicit year and month and defaults to a non-destructive dry run:
 
 ```text
-Actions -> Archive completed weather month -> Run workflow
+Actions -> Clean up completed weather month -> Run workflow
 year: 2026
 month: 9
 dry_run: true
@@ -132,17 +133,18 @@ dry_run: true
 
 The dry run renders a preview artifact and reports the row count without
 uploading, deleting, or changing the R2 snapshot. After checking that preview,
-run the same month again with `dry_run: false`. The destructive run uploads:
+run the same month again with `dry_run: false`. The destructive run uploads the
+reviewed heatmap to R2:
 
 ```text
-archives/2026-09/observations.csv.gz
-archives/2026-09/heatmap.png
+heatmaps/2026-09/heatmap.png
 ```
 
-It then removes the reviewed month from the active SQLite file, runs `VACUUM`,
-uploads the reduced snapshot to R2, and commits the reviewed PNG and updated
-README statistics. The current and future months cannot be archived, and an
-existing archive cannot be overwritten.
+It then permanently removes the reviewed month's detailed observations from the
+active SQLite file, runs `VACUUM`, uploads the reduced snapshot to R2, and
+commits the reviewed PNG and updated README statistics. The current and future
+months cannot be cleaned up. This is intentional data deletion: once removed,
+the sub-daily observations cannot be recovered from AEMET's historical API.
 
 ## Automation
 
@@ -212,10 +214,10 @@ This is a deliberate hobby-project trade-off, not a claim that Git is a good
 general-purpose database. R2 provides durable object storage while SQLite keeps
 the data model simple and reproducible.
 
-The manual monthly retention plan will archive that month's rows to R2 after its
-heatmap has been checked, remove them from the active SQLite file, and commit
-the reviewed PNG and summary metadata to Git. The archive step will be explicit
-and manual so an incomplete month cannot be deleted by accident.
+The manual monthly retention plan deletes that month's rows from the active
+SQLite file after its heatmap has been checked, while retaining the reviewed PNG
+in Git and R2. This keeps the detailed feed small without storing data that the
+project does not plan to query again.
 
 If the feed grows beyond this project's scale, the next options are:
 

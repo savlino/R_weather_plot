@@ -13,8 +13,8 @@ con <- db_connect(Sys.getenv("WEATHER_DB", unset = DB_PATH_DEFAULT))
 on.exit(dbDisconnect(con), add = TRUE)
 coverage <- db_coverage(con)
 
-archive_files <- if (dir.exists("data/archive")) {
-  list.files("data/archive", pattern = "\\.csv\\.gz$", full.names = FALSE)
+completed_heatmaps <- if (dir.exists("plots")) {
+  list.files("plots", pattern = "^aemet-[0-9]{4}-[0-9]{2}\\.png$", full.names = FALSE)
 } else {
   character()
 }
@@ -42,7 +42,7 @@ stats <- c(
   STATS_START,
   "_Generated from the active SQLite snapshot in Cloudflare R2._",
   station_lines,
-  sprintf("- Archived months: **%d**", length(archive_files)),
+  sprintf("- Completed heatmaps retained: **%d**", length(completed_heatmaps)),
   STATS_END
 )
 

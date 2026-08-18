@@ -48,7 +48,7 @@ carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
 <!-- feed-stats:start -->
 _Generated from the committed SQLite feed._
-- **CASTRO URDIALES-EDAR** (`1083L`): 116 observations, 2026-08-12 to 2026-08-18 UTC, 94.3% hourly coverage
+- **CASTRO URDIALES-EDAR** (`1083L`): 121 observations, 2026-08-12 to 2026-08-18 UTC, 94.5% hourly coverage
 - Archived months: **0**
 <!-- feed-stats:end -->
 

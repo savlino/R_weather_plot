@@ -47,9 +47,7 @@ Requests use the two-step AEMET protocol: the first response is a JSON envelope
 carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
 <!-- feed-stats:start -->
-_Generated from the committed SQLite feed._
-- **CASTRO URDIALES-EDAR** (`1083L`): 127 observations, 2026-08-12 to 2026-08-18 UTC, 94.8% hourly coverage
-- Archived months: **0**
+_Generated from the active SQLite snapshot in Cloudflare R2._
 <!-- feed-stats:end -->
 
 ## Layout
@@ -63,6 +61,7 @@ _Generated from the committed SQLite feed._
 | [scripts/fetch.R](scripts/fetch.R) | Polling entry point |
 | [scripts/render_heatmap.R](scripts/render_heatmap.R) | Plot entry point |
 | [scripts/update_stats.R](scripts/update_stats.R) | Generated README feed statistics |
+| [scripts/archive_month.R](scripts/archive_month.R) | Dry-run and monthly R2 archive logic |
 | [tests/testthat](tests/testthat) | Network-free tests for parsing, storage, and binning |
 | [heatmap_project.r](heatmap_project.r) | Interactive fetch + plot |
 
@@ -118,10 +117,37 @@ and revision-aware SQLite writes, UTC-to-local-time conversion, complete month
 matrix dimensions, and precipitation sums within a 3-hour bin. The same suite
 runs in GitHub Actions on pushes and pull requests.
 
+## Monthly archive
+
+After a month is complete, review its heatmap before removing its detailed rows
+from the active SQLite snapshot. The manual [archive workflow](.github/workflows/archive-month.yml)
+requires an explicit year and month and defaults to a non-destructive dry run:
+
+```text
+Actions -> Archive completed weather month -> Run workflow
+year: 2026
+month: 9
+dry_run: true
+```
+
+The dry run renders a preview artifact and reports the row count without
+uploading, deleting, or changing the R2 snapshot. After checking that preview,
+run the same month again with `dry_run: false`. The destructive run uploads:
+
+```text
+archives/2026-09/observations.csv.gz
+archives/2026-09/heatmap.png
+```
+
+It then removes the reviewed month from the active SQLite file, runs `VACUUM`,
+uploads the reduced snapshot to R2, and commits the reviewed PNG and updated
+README statistics. The current and future months cannot be archived, and an
+existing archive cannot be overwritten.
+
 ## Automation
 
 [.github/workflows/fetch-aemet.yml](.github/workflows/fetch-aemet.yml) polls
-every 6 hours and commits the updated database back to the repository.
+every 6 hours and updates the SQLite snapshot in Cloudflare R2.
 
 Two repository secrets are required:
 
@@ -141,7 +167,6 @@ The fetch workflow stores the current SQLite snapshot in Cloudflare R2 and
 restores it before each poll. This keeps the active database out of Git history.
 R2 is now required by the fetch workflow because `data/weather.sqlite` is no
 longer tracked in Git. Create these repository secrets:
-create these additional repository secrets:
 
 | Secret | Purpose |
 | --- | --- |
@@ -153,8 +178,7 @@ create these additional repository secrets:
 The workflow uses `snapshots/weather.sqlite` as its durable live database and
 uploads it after each successful fetch.
 The credentials are used only by the upload step and are never written to the
-repository. If any R2 secret is missing, the step is skipped and the existing
-the fallback workflow continues to run unchanged.
+repository. The workflow fails clearly if an R2 secret is missing.
 
 For the R2 token, create an R2 API token with `Object Read & Write` permission
 for the selected bucket. The endpoint is based on the Cloudflare account ID:
@@ -195,12 +219,8 @@ and manual so an incomplete month cannot be deleted by accident.
 
 If the feed grows beyond this project's scale, the next options are:
 
-- store append-only CSV or NDJSON and commit less frequently, rebuilding SQLite
     locally when needed;
-- publish monthly SQLite/CSV snapshots as GitHub Release assets instead of Git
     history;
-- store the feed in object storage such as S3 or Cloudflare R2; or
-- use a managed PostgreSQL database when concurrent readers, retention queries,
     or multiple stations justify operating a service.
 
 Containerising the R scripts would improve reproducibility, but it would not

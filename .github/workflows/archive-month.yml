@@ -1,0 +1,128 @@
+name: Archive completed weather month
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Completed calendar year, for example 2026"
+        required: true
+        type: string
+      month:
+        description: "Completed calendar month, 1-12"
+        required: true
+        type: string
+      dry_run:
+        description: "Report and render only; do not archive or delete"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: aemet-archive
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+  R2_BUCKET: ${{ secrets.R2_BUCKET }}
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FEED_PUSH_TOKEN }}
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::DBI
+            any::RSQLite
+            any::dplyr
+            any::lubridate
+            any::reshape2
+            any::pheatmap
+
+      - name: Restore SQLite snapshot from Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: >-
+          aws s3 cp
+          s3://${R2_BUCKET}/snapshots/weather.sqlite
+          data/weather.sqlite
+          --endpoint-url ${R2_ENDPOINT}
+
+      - name: Archive and render month
+        env:
+          WEATHER_DB: data/weather.sqlite
+        run: >-
+          Rscript scripts/archive_month.R
+          ${{ inputs.year }} ${{ inputs.month }} ${{ inputs.dry_run }}
+
+      - name: Upload dry-run preview
+        if: ${{ inputs.dry_run == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: heatmap-review-${{ inputs.year }}-${{ inputs.month }}
+          path: plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
+          retention-days: 14
+
+      - name: Upload monthly archive to R2
+        if: ${{ inputs.dry_run == false }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: >-
+          aws s3 cp
+          data/archive/${{ inputs.year }}-${{ inputs.month }}/observations.csv.gz
+          s3://${R2_BUCKET}/archives/${{ inputs.year }}-${{ inputs.month }}/observations.csv.gz
+          --endpoint-url ${R2_ENDPOINT}
+
+      - name: Upload reviewed heatmap to R2
+        if: ${{ inputs.dry_run == false }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: >-
+          aws s3 cp
+          plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
+          s3://${R2_BUCKET}/archives/${{ inputs.year }}-${{ inputs.month }}/heatmap.png
+          --endpoint-url ${R2_ENDPOINT}
+
+      - name: Update feed statistics
+        if: ${{ inputs.dry_run == false }}
+        run: Rscript scripts/update_stats.R
+
+      - name: Upload reduced SQLite snapshot to R2
+        if: ${{ inputs.dry_run == false }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: >-
+          aws s3 cp data/weather.sqlite
+          s3://${R2_BUCKET}/snapshots/weather.sqlite
+          --endpoint-url ${R2_ENDPOINT}
+
+      - name: Commit reviewed PNG and stats
+        if: ${{ inputs.dry_run == false }}
+        env:
+          GIT_TOKEN: ${{ secrets.FEED_PUSH_TOKEN }}
+        run: |
+          git config user.name "savlino"
+          git config user.email "savlino@users.noreply.github.com"
+          git add README.md plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
+          git commit -m "archive: weather observations ${{ inputs.year }}-${{ inputs.month }}" || echo "No Git changes to commit."
+          git pull --rebase --autostash
+          git push

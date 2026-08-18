@@ -25,7 +25,7 @@ jobs:
       # push below is attributed to a user. Pushes by github-actions[bot] do
       # not count as repository activity, and public repos have their
       # scheduled workflows disabled after 60 days without any.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.FEED_PUSH_TOKEN }}
 

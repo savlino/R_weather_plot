@@ -102,6 +102,9 @@ Rscript scripts/render_heatmap.R 2026 8 ta
 The default station is configured once in `R/config.R`. Pass station codes as
 arguments for a one-off fetch or set `AEMET_STATIONS` to a comma- or
 space-separated list to fetch multiple stations without changing the scripts.
+The live SQLite file is stored in R2 rather than Git; for local rendering,
+restore `snapshots/weather.sqlite` to `data/weather.sqlite` first, or run a
+local fetch with `AEMET_API_KEY` configured.
 
 Supported parameters include `ta` (temperature), `hr`, `pres`, `prec`, `vv`.
 Precipitation is summed per bin, everything else is averaged.
@@ -152,7 +155,7 @@ the sub-daily observations cannot be recovered from AEMET's historical API.
 [.github/workflows/fetch-aemet.yml](.github/workflows/fetch-aemet.yml) polls
 every 6 hours and updates the SQLite snapshot in Cloudflare R2.
 
-Two repository secrets are required:
+The fetch and cleanup workflows use these repository secrets:
 
 | Secret | Purpose |
 | --- | --- |
@@ -196,6 +199,35 @@ project is far below those limits.
 
 ## Design trade-offs
 
+### Why SQLite plus R2
+
+The project deliberately keeps SQLite as the data model and moves only the
+durable file storage to Cloudflare R2. For one hourly station, a database server
+would add connection management, migrations, backups, and an always-available
+service without solving a problem this project currently has. SQLite remains
+portable and easy to inspect locally; R2 removes the growing binary database
+from Git history.
+
+The migration required only two object-storage operations in the fetch workflow:
+
+```text
+restore snapshots/weather.sqlite from R2
+run the existing R fetch and plotting code
+upload the updated snapshots/weather.sqlite to R2
+```
+
+R owns the weather, SQLite, plotting, cleanup, and statistics logic. The AWS CLI
+is used only for S3-compatible file transfer, GitHub Actions provides the
+schedule and secrets, and Git retains code, README metadata, and reviewed PNGs.
+This keeps the cloud integration small while giving the project a realistic
+object-storage architecture.
+
+R2 is a reasonable choice here because the workload is one small snapshot and a
+few monthly images. It provides durable object storage, free egress, and a free
+tier much larger than this feed. The trade-off is that the project now depends
+on R2 credentials and a successful restore/upload pair; the workflow fails
+early if those credentials are missing.
+
 ### A rolling API window, not historical backfill
 
 AEMET's conventional observation endpoint exposes only the latest roughly 12
@@ -204,37 +236,27 @@ observations needed for this heatmap. Polling every 6 hours gives overlapping
 coverage: a delayed or missed run can usually be recovered by the next poll,
 but two consecutive missed runs can create a permanent gap.
 
-### SQLite in R2
-
-The feed uses SQLite because it is portable, has no server to operate, and is
-more than sufficient for one hourly station and a small personal project. The
-live file is stored in R2 rather than committed to Git; the workflow downloads
-it, updates it, and uploads the replacement.
-
-This is a deliberate hobby-project trade-off, not a claim that Git is a good
-general-purpose database. R2 provides durable object storage while SQLite keeps
-the data model simple and reproducible.
-
-The manual monthly retention plan deletes that month's rows from the active
-SQLite file after its heatmap has been checked, while retaining the reviewed PNG
-in Git and R2. This keeps the detailed feed small without storing data that the
-project does not plan to query again.
+The manual monthly cleanup deletes that month's rows from the active SQLite file
+after its heatmap has been checked, while retaining the reviewed PNG in Git and
+R2. This keeps the detailed feed small without storing data that the project does
+not plan to query again.
 
 If the feed grows beyond this project's scale, the next options are:
 
+- append-only CSV or NDJSON with less frequent commits, rebuilding SQLite
     locally when needed;
-    history;
-    or multiple stations justify operating a service.
+- GitHub Release assets for monthly snapshots;
+- a managed PostgreSQL service when concurrent readers, retention queries, or
+    multiple stations justify operating a service.
 
 Containerising the R scripts would improve reproducibility, but it would not
 solve Git's binary-history problem or replace the need for durable storage.
 
 ## Previous data source
 
-Earlier revisions read a one-off CSV export from the
+Earlier revisions used a one-off CSV export from the
 [Meteogalicia](https://www.meteogalicia.gal/observacion/estacionshistorico/historico.action)
-portal (station *Porto de Vigo*), kept here as
-[resultadoCSV_24.12.csv](resultadoCSV_24.12.csv). That export was **long**
-format — one row per parameter per timestamp, with `Código.parámetro` / `Valor`
-columns — whereas AEMET returns **wide** rows, one column per parameter. The
-plotting code no longer filters by parameter name; it selects a column instead.
+portal for station *Porto de Vigo*. That export was **long** format — one row
+per parameter per timestamp, with `Código.parámetro` / `Valor` columns —
+whereas AEMET returns **wide** rows, one column per parameter. The plotting code
+no longer depends on the old export; it selects an AEMET column instead.

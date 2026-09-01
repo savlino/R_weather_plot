@@ -44,6 +44,7 @@ jobs:
         with:
           packages: |
             any::DBI
+            any::cpp11
             any::RSQLite
             any::dplyr
             any::lubridate
@@ -61,6 +62,12 @@ jobs:
           data/weather.sqlite
           --endpoint-url ${R2_ENDPOINT}
 
+      - name: Format year and month
+        id: fmt
+        run: |
+          printf 'year=%04d\n' "${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+          printf 'month=%02d\n' "${{ inputs.month }}" >> "$GITHUB_OUTPUT"
+
       - name: Render and clean up month
         env:
           WEATHER_DB: data/weather.sqlite
@@ -72,8 +79,8 @@ jobs:
         if: ${{ inputs.dry_run == true }}
         uses: actions/upload-artifact@v4
         with:
-          name: heatmap-review-${{ inputs.year }}-${{ inputs.month }}
-          path: plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
+          name: heatmap-review-${{ steps.fmt.outputs.year }}-${{ steps.fmt.outputs.month }}
+          path: plots/aemet-${{ steps.fmt.outputs.year }}-${{ steps.fmt.outputs.month }}.png
           retention-days: 14
 
       - name: Upload reviewed heatmap to R2
@@ -84,8 +91,8 @@ jobs:
           AWS_DEFAULT_REGION: auto
         run: >-
           aws s3 cp
-          plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
-          s3://${R2_BUCKET}/heatmaps/${{ inputs.year }}-${{ inputs.month }}/heatmap.png
+          plots/aemet-${{ steps.fmt.outputs.year }}-${{ steps.fmt.outputs.month }}.png
+          s3://${R2_BUCKET}/heatmaps/${{ steps.fmt.outputs.year }}-${{ steps.fmt.outputs.month }}/heatmap.png
           --endpoint-url ${R2_ENDPOINT}
 
       - name: Update feed statistics
@@ -110,7 +117,7 @@ jobs:
         run: |
           git config user.name "savlino"
           git config user.email "savlino@users.noreply.github.com"
-          git add README.md plots/aemet-${{ inputs.year }}-${{ inputs.month }}.png
-          git commit -m "cleanup: weather observations ${{ inputs.year }}-${{ inputs.month }}" || echo "No Git changes to commit."
+          git add README.md plots/aemet-${{ steps.fmt.outputs.year }}-${{ steps.fmt.outputs.month }}.png
+          git commit -m "cleanup: weather observations ${{ steps.fmt.outputs.year }}-${{ steps.fmt.outputs.month }}" || echo "No Git changes to commit."
           git pull --rebase --autostash
           git push

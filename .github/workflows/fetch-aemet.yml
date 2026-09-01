@@ -39,6 +39,7 @@ jobs:
             any::httr2
             any::jsonlite
             any::DBI
+            any::cpp11
             any::RSQLite
 
       - name: Require Cloudflare R2 configuration

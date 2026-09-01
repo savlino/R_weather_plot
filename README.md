@@ -3,23 +3,19 @@
 Monthly weather heatmaps built from a continuously accumulated feed of
 [AEMET OpenData](https://opendata.aemet.es/) surface observations.
 
+This project is my attempt to dip a toe into R by applying newly learned skills
+to a real weather-data workflow.
+
 ## Heatmap examples
-
-### Legacy Vigo demo
-
-![Legacy Vigo temperature heatmap](plots/legacy-vigo-meteogalicia.png)
-
-This December 2024 heatmap uses the previous Meteogalicia export for Porto de
-Vigo. It is retained as a visual demo only and is not produced from the current
-AEMET feed.
 
 ### Current AEMET feed
 
-![Castro Urdiales temperature heatmap](plots/current-castro-urdiales-aemet.png)
+![Castro Urdiales temperature heatmap](plots/aemet-2026-08.png)
 
-This August 2026 heatmap uses the current AEMET feed for Castro Urdiales-EDAR.
-It is an in-progress example with partial monthly coverage; the first complete
-replacement for the legacy demo is expected in September 2026.
+This heatmap uses the current AEMET feed for Castro Urdiales-EDAR. The feed
+only started polling on 2026-08-13, so days before that remain blank in any
+given month, and August 2026 in particular is incomplete for that reason. The
+grid fills in as further months accumulate a full 6-hourly polling history.
 
 ## How the feed works
 

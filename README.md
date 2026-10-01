@@ -10,13 +10,13 @@ to a real weather-data workflow.
 
 ### Current AEMET feed
 
-![Castro Urdiales temperature heatmap](plots/aemet-2026-08.png)
+![Castro Urdiales temperature heatmap](plots/aemet-2026-09.png)
 
-This heatmap uses the current AEMET feed for Castro Urdiales-EDAR. The feed
-only started polling on 2026-08-13, so days before that remain blank in any
-given month, and August 2026 in particular is incomplete for that reason. The
-grid fills in as further months accumulate a full 6-hourly polling history.
-
+This heatmap uses the current AEMET feed for Castro Urdiales-EDAR. Polling
+began on 2026-08-13, so the August 2026 heatmap is incomplete and earlier
+dates are blank.
+September 2026 is the first full month in the feed; its completed heatmap
+is shown above. Historical plots present in /plots folder.
 ## How the feed works
 
 AEMET's station endpoint

@@ -42,7 +42,8 @@ aemet_get <- function(url, api_key, encoding = "UTF-8") {
     req_user_agent("R_weather_plot (https://github.com/)") |>
     req_retry(
       max_tries = 5,
-      is_transient = function(resp) resp_status(resp) %in% c(429, 500, 502, 503, 504)
+      is_transient = function(resp) resp_status(resp) %in% c(401,429, 500, 502, 503, 504),
+      backoff = function(attempt) 300
     ) |>
     req_perform()
 

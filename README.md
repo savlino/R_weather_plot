@@ -44,7 +44,7 @@ carrying a short-lived `datos` URL; the payload behind it is ISO-8859-15.
 
 <!-- feed-stats:start -->
 _Generated from the active SQLite snapshot in Cloudflare R2._
-- **CASTRO URDIALES-EDAR** (`1083L`): 248 observations, 2026-10-31 to 2026-11-14 UTC, 77.7% hourly coverage
+- **CASTRO URDIALES-EDAR** (`1083L`): 260 observations, 2026-10-31 to 2026-11-14 UTC, 78.5% hourly coverage
 - Completed heatmaps retained: **3**
 <!-- feed-stats:end -->
 
